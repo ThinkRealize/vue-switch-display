@@ -1,5 +1,5 @@
-import { controler, child } from './directive/switch-display
-'
+import { controler, child } from './directive/switch-display'
+
 const install = (Vue, config = {}) => {
   if (install.installed) return
   Vue.directives('switch-display-controler', controler)

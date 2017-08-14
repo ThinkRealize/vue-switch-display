@@ -4,7 +4,7 @@ const childType = {
   occultation: 'occultation'
 }
 const eventType = {
-  displayClick: `${childType.display}click`,
+  displayClicked: `${childType.display}clicked`,
   occultationFocus: `${childType.occultation}focus`,
   childInserted: 'childinserted'
 }
@@ -13,12 +13,10 @@ const keyCodes = {
   enter: 13
 }
 
-const displayClickMap = new Map()
-const occultationFocusMap = new Map()
-const childInsertedMap = new Map()
-
-const rowCellList = []
+let rowCellList = []
 let focusChild = {}
+
+let hiddenOccultation = null
 
 const getInput = (el) => {
   if (el.tagName === 'INPUT') {
@@ -32,26 +30,31 @@ const getInput = (el) => {
   }
 }
 
-const controler = {
-  inserted (el, bingding) {
-    const hiddenOccultationCallback = bingding.value
-    const switchRowCellShow = ({ row, type, isShow }) => {
-      if (row === undefined || row >= rowCellList.length) {
-        console.log('row invalid', row)
-        return
-      }
-      rowCellList[row].forEach((cell) => {
-        const element = cell[type]
-        if (isShow) {
-          element.el.style = {}
-          element.isShow = true
-        } else {
-          element.el.style.display = 'none'
-          element.isShow = false
-        }
-      })
+const switchRowCellShow = ({ row, type, isShow }) => {
+  if (row === undefined || row >= rowCellList.length) {
+    console.log('row invalid', row)
+    focusChild = {}
+    return
+  }
+  rowCellList[row].forEach((cell) => {
+    const element = cell[type]
+    if (isShow) {
+      element.el.style = {}
+      element.isShow = true
+    } else {
+      element.el.style.display = 'none'
+      element.isShow = false
     }
-    const switchRowDisplayShow = (row, isShow = false) => {
+  })
+}
+const switchRowDisplayShow = (row, isShow = false) => {
+  let result = null
+  if (isShow) {
+    let result = hiddenOccultation(row)
+    if (result === false) return
+  }
+  if (result instanceof Promise) {
+    result.then(() => {
       switchRowCellShow({
         row,
         type: childType.display,
@@ -62,79 +65,111 @@ const controler = {
         type: childType.occultation,
         isShow: !isShow
       })
-      if (isShow) {
-        hiddenOccultationCallback(row)
-      }
-    }
-    const focuesRowCell = (row, column) => {
-      if (row >= rowCellList.length) {
-        console.log('row invalid', row)
+    })
+  } else {
+    switchRowCellShow({
+      row,
+      type: childType.display,
+      isShow: isShow
+    })
+    switchRowCellShow({
+      row,
+      type: childType.occultation,
+      isShow: !isShow
+    })
+  }
+}
+
+const displayClicked = (ev) => {
+  const { child: { row, column } } = ev.detail
+  if (focusChild.row !== undefined) {
+    switchRowDisplayShow(focusChild.row, true)
+  }
+  switchRowDisplayShow(row, false)
+  focuesRowCell(row, column)
+}
+
+const occultationFocus = (ev) => {
+  const { child } = ev.detail
+  focusChild = child
+}
+
+const childInserted = (ev) => {
+  const { child, child: { row, column, isDefaultShow, isDefaultHidden } } = ev.detail
+  const cellList = rowCellList[row] ? rowCellList[row] : []
+  const cell = cellList[column] ? cellList[column] : {}
+  child.isLastRow = row === length - 1
+  child.isLastCell = child.isLastColumn && child.isLastRow
+  if (isDefaultShow) {
+    cell[childType.display] = child
+  }
+  if (isDefaultHidden) {
+    cell[childType.occultation] = child
+  }
+  cellList[column] = cell
+  rowCellList[row] = cellList
+}
+
+const documentClick = (ev) => {
+  let hidden = false
+  for (let cellList of rowCellList) {
+    for (let cell of cellList) {
+      if (cell[childType.display].el === ev.target) {
         return
       }
-      const cell = rowCellList[row][column]
-      const { input } = cell[childType.occultation]
-      if (input) input.focus()
+      if (cell[childType.occultation].input !== ev.target) {
+        hidden = true
+      }
     }
-    const focusRowFirstCell = (row) => {
-      focuesRowCell(row, 0)
+  }
+  if (hidden && focusChild.row !== undefined) {
+    switchRowDisplayShow(focusChild.row, true)
+    focusChild = {}
+  }
+}
+const focuesRowCell = (row, column) => {
+  if (row >= rowCellList.length) {
+    console.log('row invalid', row)
+    focusChild = {}
+    return
+  }
+  const cell = rowCellList[row][column]
+  const { input } = cell[childType.occultation]
+  if (input) input.focus()
+}
+const focusRowFirstCell = (row) => {
+  focuesRowCell(row, 0)
+}
+
+const keydown = (ev) => {
+  const { keyCode } = ev
+  const { el, isLastColumn, row, isShow } = focusChild
+  if (((keyCode === keyCodes.tab && isLastColumn) || keyCode === keyCodes.enter) && el && isShow) {
+    switchRowDisplayShow(row, true)
+    switchRowDisplayShow(row + 1, false)
+    if (keyCode === keyCodes.enter) {
+      focusRowFirstCell(row + 1)
     }
-    el.addEventListener(eventType.childInserted, ev => {
-      const { child, child: { row, column, isDefaultShow, isDefaultHidden } } = ev.detail
-      const cellList = rowCellList[row] ? rowCellList[row] : []
-      const cell = cellList[column] ? cellList[column] : {}
-      child.isLastRow = row === length - 1
-      child.isLastCell = child.isLastColumn && child.isLastRow
-      if (isDefaultShow) {
-        cell[childType.display] = child
-      }
-      if (isDefaultHidden) {
-        cell[childType.occultation] = child
-      }
-      cellList[column] = cell
-      rowCellList[row] = cellList
-    })
-    el.addEventListener(eventType.displayClick, ev => {
-      const { child: { row, column } } = ev.detail
-      if (focusChild.row !== undefined) {
-        switchRowDisplayShow(focusChild.row, true)
-      }
-      switchRowDisplayShow(row, false)
-      focuesRowCell(row, column)
-    })
-    el.addEventListener('keydown', ev => {
-      const { keyCode } = ev
-      const { el, isLastColumn, row, isShow } = focusChild
-      if (((keyCode === keyCodes.tab && isLastColumn) || keyCode === keyCodes.enter) && el && isShow) {
-        switchRowDisplayShow(row, true)
-        switchRowDisplayShow(row + 1, false)
-        if (keyCode === keyCodes.enter) {
-          focusRowFirstCell(row + 1)
-        }
-      }
-    }, true)
-    el.addEventListener(eventType.occultationFocus, ev => {
-      const { child } = ev.detail
-      focusChild = child
-    })
-    document.addEventListener('click', ev => {
-      let hidden = false
-      for (let cellList of rowCellList) {
-        for (let cell of cellList) {
-          if (cell[childType.display].el === ev.target) {
-            return
-          }
-          if (cell[childType.occultation].input !== ev.target) {
-            hidden = true
-          }
-        }
-      }
-      if (hidden && focusChild.row !== undefined) {
-        switchRowDisplayShow(focusChild.row, true)
-        focusChild = {}
-      }
-    }, true)
+  }
+}
+
+const controler = {
+  inserted (el, bingding) {
+    hiddenOccultation = bingding.value.hiddenOccultation
+    el.addEventListener(eventType.childInserted, childInserted)
+    el.addEventListener(eventType.displayClicked, displayClicked)
+    el.addEventListener('keydown', keydown, true)
+    el.addEventListener(eventType.occultationFocus, occultationFocus)
+    document.addEventListener('click', documentClick, true)
   },
   unbind (el) {
+    parentCtx = undefined
+    rowCellList = undefined
+    focusChild = undefined
+    hiddenOccultation = undefined
+    el.removeEventListener(eventType.childInserted, childInserted)
+    el.removeEventListener(eventType.displayClicked, displayClicked)
+    el.removeEventListener(eventType.occultationFocus, occultationFocus)
   }
 }
 
@@ -158,12 +193,11 @@ const child = {
     }
 
     if (child.isDefaultShow) {
-      const displayClick = new CustomEvent(eventType.displayClick, {
+      const displayClick = new CustomEvent(eventType.displayClicked, {
         detail: {
           child
         }
       })
-      displayClickMap.set(el, displayClick)
       el.addEventListener('click', ev => {
         parentCtx.$el.dispatchEvent(displayClick)
       })
@@ -175,7 +209,6 @@ const child = {
           child
         }
       })
-      occultationFocusMap.set(el, occultationFocus)
       child.input.addEventListener('focus', ev => {
         parentCtx.$el.dispatchEvent(occultationFocus)
       })
@@ -185,10 +218,9 @@ const child = {
         child
       }
     })
-    childInsertedMap.set(el, childInserted)
     parentCtx.$el.dispatchEvent(childInserted)
   },
-  unbind: function (el) {
+  unbind (el) {
   }
 }
 
