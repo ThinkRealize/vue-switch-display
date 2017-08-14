@@ -1,6 +1,6 @@
 {
   "name": "vue-switch-display",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "vue 切换 table 中 input 和其他元素显示的指令",
   "main": "src/index.js",
   "scripts": {
