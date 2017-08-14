@@ -1,0 +1,23 @@
+{
+  "name": "vue-switch-display",
+  "version": "1.0.0",
+  "description": "vue 切换 table 中 input 和其他元素显示的指令",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThinkRealize/vue-switch-display.git"
+  },
+  "keywords": [
+    "vue",
+    "directive"
+  ],
+  "author": "yellowstarlewis@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ThinkRealize/vue-switch-display/issues"
+  },
+  "homepage": "https://github.com/ThinkRealize/vue-switch-display#readme"
+}
