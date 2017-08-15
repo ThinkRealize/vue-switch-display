@@ -22,11 +22,20 @@ const getInput = (el) => {
   if (el.tagName === 'INPUT') {
     return el
   } else {
-    for (let childNode of el.childNodes) {
-      if (childNode.tagName === 'INPUT') {
-        return childNode
+    let input = null
+    const getInput = (node) => {
+      if (input) return
+      let { tagName, children } = node
+      if (tagName === 'INPUT') {
+        input = node
+        return
+      }
+      for (let child of children) {
+        getInput(child)
       }
     }
+    getInput(el)
+    return input
   }
 }
 
@@ -186,7 +195,7 @@ const child = {
       isDefaultHidden: arg === childType.occultation,
       isShow: arg === childType.display,
       isLastColumn: last,
-      input: getInput(el)
+      input: arg === childType.occultation ? getInput(el) : ''
     }
     if (child.isDefaultHidden) {
       el.style.display = 'none'
