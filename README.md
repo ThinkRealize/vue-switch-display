@@ -1,9 +1,9 @@
 # vue-switch-display
-vue 切换 table 中 input 和其他元素显示的指令
+vue 切换 element-ui el-table 中 input 和其他元素显示的指令
 
 ### Demo
 
-例子使用 element-ui 的 el-table, el-table-column 组件，也可在其他 UI 组件或原生标签中使用。
+例子使用 element-ui 的 el-table, el-table-column 组件.
 
 注意：el-table 如果启用 fixed 模式，则该指令无效。因为这种情况下，el-table-column 会生成多份，且一部展示一部分不展示，正在适配中。
 
